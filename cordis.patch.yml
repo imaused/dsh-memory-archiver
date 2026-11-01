@@ -1,0 +1,10 @@
+# dsh-memory-archiver 的挂载层（bundle patch）。
+# 需要改可写目录时，在 profile 的 cordis.patch.yml 里按 id 覆盖：
+#   - id: memory-archiver
+#     name: 'dsh-memory-archiver'
+#     config:
+#       allowedRoots:
+#         - 'D:\\some\\memory'
+- insert:
+    - id: memory-archiver
+      name: 'dsh-memory-archiver'
