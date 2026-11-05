@@ -23,9 +23,10 @@ DSH 的文件沙箱只有三档（`read-only` / `workspace-write` / `danger-full
 
 | 工具 | 作用 |
 |---|---|
-| `memory_archive` | 写一个记忆文件（`dir` + `file` + `content`，默认拒绝覆盖；UTF-8 **无 BOM**） |
+| `memory_archive` | 写一个记忆文件（`dir` + `file` + `content`，默认拒绝覆盖；覆盖前自动备份到 `.backup/`；UTF-8 **无 BOM**） |
 | `memory_index` | 往索引文件追加/按锚点插入一行（保持原 BOM 与换行；重复行跳过） |
-| `memory_patch` | 就地替换已有记忆文件里的一段文本（要求唯一匹配，或显式 `replaceAll`）——用于"此处更正" |
+| `memory_patch` | 就地替换已有记忆文件里的一段文本（替换前自动备份；要求唯一匹配，或显式 `replaceAll`）——用于"此处更正" |
+| `memory_supersede` | 一次完成"写新文件 + 旧文件标 `status: superseded` + 备份旧文件"，不删除任何文件 |
 
 默认允许的根：
 
@@ -59,6 +60,16 @@ node test/smoke.mjs      # 离线：写入 / 越界拒绝 / junction 逃逸 / BO
 ```
 
 装好后：`health` 报 `[OK]`；新会话里应能看到 `memory_archive` 与 `memory_index` 两个工具。
+
+## 0.2.0：覆盖有备份、更正一步到位
+
+- `memory_archive(overwrite: true)` 与 `memory_patch` 在写之前，会把旧文件复制到同目录的
+  `.backup/<原名>.<时间戳>.md`；返回结果里的 `backup` 就是这份留底。备份只增不删。
+- `memory_supersede` 把"写新结论 + 把旧文件标成 `status: superseded`"合成一次调用：
+  旧文件保留原文，只在 front-matter 里加 `status: superseded` / `superseded_by` / `superseded_at`。
+  没有 front-matter 的文件会在顶部补一个。
+- 仍然**没有删除工具**：删除只能人工或 git 做。
+- 测试：`node --test test/core.test.mjs`（12 项，含备份与 supersede）。
 
 ## 安全边界（重要）
 
