@@ -1,6 +1,6 @@
 {
   "name": "dsh-memory-archiver",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "Approval-free memory archiving for the DSH memory convention: writes only inside configured memory roots, everything else is refused.",
   "type": "module",

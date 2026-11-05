@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, existsSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, sep } from 'node:path'
 
@@ -11,6 +11,7 @@ import {
   assertMemoryFileName,
   markSuperseded,
   patchMemoryFile,
+  pruneBackups,
   supersedeMemoryFile,
   writeMemoryFile,
 } from '../lib/core.js'
@@ -211,4 +212,91 @@ test('markSuperseded updates an existing status line instead of appending a dupl
   assert.match(marked, /status: superseded/)
   assert.match(marked, /superseded_by: 2026-11-05-new\.md/)
   assert.match(marked, /updated: 2026-10-17/)
+})
+
+test('pruneBackups removes backups older than retentionDays', async () => {
+  const dir = root()
+  const backupDir = join(dir, '.backup')
+  mkdirSync(backupDir, { recursive: true })
+  const now = Date.now()
+  const day = 24 * 60 * 60 * 1000
+  const old = join(backupDir, 'old.md')
+  const recent = join(backupDir, 'recent.md')
+  const fresh = join(backupDir, 'fresh.md')
+  writeFileSync(old, 'old')
+  writeFileSync(recent, 'recent')
+  writeFileSync(fresh, 'fresh')
+  utimesSync(old, new Date(now - 40 * day), new Date(now - 40 * day))
+  utimesSync(recent, new Date(now - 10 * day), new Date(now - 10 * day))
+
+  const result = await pruneBackups(backupDir, { retentionDays: 30, now })
+  assert.equal(result.removed, 1)
+  assert.equal(existsSync(old), false)
+  assert.equal(existsSync(recent), true)
+  assert.equal(existsSync(fresh), true)
+  assert.equal(result.kept, 2)
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test('pruneBackups enforces maxBytes by deleting the oldest first', async () => {
+  const dir = root()
+  const backupDir = join(dir, '.backup')
+  mkdirSync(backupDir, { recursive: true })
+  const now = Date.now()
+  const day = 24 * 60 * 60 * 1000
+  const files = ['a.md', 'b.md', 'c.md'].map((name, index) => {
+    const full = join(backupDir, name)
+    writeFileSync(full, 'x'.repeat(100))
+    const at = new Date(now - (3 - index) * day)
+    utimesSync(full, at, at)
+    return full
+  })
+
+  const result = await pruneBackups(backupDir, { retentionDays: 0, maxBytes: 250, now })
+  assert.equal(result.removed, 1)
+  assert.equal(existsSync(files[0]), false)
+  assert.equal(existsSync(files[1]), true)
+  assert.equal(existsSync(files[2]), true)
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test('pruneBackups never touches memory files or non-markdown entries', async () => {
+  const dir = root()
+  const backupDir = join(dir, '.backup')
+  mkdirSync(backupDir, { recursive: true })
+  const note = join(dir, 'note.md')
+  writeFileSync(note, 'body')
+  const keep = join(backupDir, 'keep.txt')
+  writeFileSync(keep, 'x')
+
+  // "now" far in the future: every .md backup would be expired, but there is none.
+  await pruneBackups(backupDir, {
+    retentionDays: 1,
+    now: Date.now() + 10 * 24 * 60 * 60 * 1000,
+  })
+  assert.equal(existsSync(note), true)
+  assert.equal(existsSync(keep), true)
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test('writeMemoryFile prunes expired backups after creating a new one', async () => {
+  const dir = root()
+  await writeMemoryFile({ roots: [dir], dir, file: 'a.md', content: 'v1' })
+  const backupDir = join(dir, '.backup')
+  mkdirSync(backupDir, { recursive: true })
+  const stale = join(backupDir, 'stale.md')
+  writeFileSync(stale, 'stale')
+  const ago = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000)
+  utimesSync(stale, ago, ago)
+
+  await writeMemoryFile({
+    roots: [dir],
+    dir,
+    file: 'a.md',
+    content: 'v2',
+    overwrite: true,
+    retentionDays: 30,
+  })
+  assert.equal(existsSync(stale), false)
+  rmSync(dir, { recursive: true, force: true })
 })
