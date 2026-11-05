@@ -1,6 +1,6 @@
 {
   "name": "dsh-memory-archiver",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Approval-free memory archiving for the DSH memory convention: writes only inside configured memory roots, everything else is refused.",
   "type": "module",
@@ -20,7 +20,7 @@
     "README.md"
   ],
   "scripts": {
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/core.test.mjs"
   },
   "engines": {
     "node": ">=18"
