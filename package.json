@@ -1,6 +1,6 @@
 {
   "name": "dsh-memory-archiver",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "description": "Approval-free memory archiving for the DSH memory convention: writes only inside configured memory roots, everything else is refused.",
   "type": "module",
@@ -25,5 +25,13 @@
   "engines": {
     "node": ">=18"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": ">=0.1.0-rc.6"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    }
+  }
 }
