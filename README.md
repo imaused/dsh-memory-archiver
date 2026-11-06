@@ -81,6 +81,10 @@ dsh plugin --profile <profile> add file:<repo 目录>
 
 装完重启 DSH，并**新开一个会话**（工具在会话创建时绑定）。
 
+## 配套插件
+
+本插件负责**写**，[dsh-kb-lite](https://github.com/imaused/dsh-kb-lite) 负责**读**：kb-lite 把同一批记忆根索引起来、带引用地检索，`memory_supersede` 写下的 `status: superseded` 会在 kb-lite 的检索里降权。两个插件可以单独用；一起装则“写入 + 检索”完整。
+
 ## 验证
 
 ```sh
