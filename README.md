@@ -88,7 +88,7 @@ dsh plugin --profile <profile> add file:<repo 目录>
 ## 验证
 
 ```sh
-npm test          # node --test test/core.test.mjs，16 项
+npm test          # node --test test/core.test.mjs，17 项
 node test/smoke.mjs
 ```
 
@@ -100,9 +100,24 @@ node test/smoke.mjs
 - 默认根改为通用（`~/.dsh/memory`），不再硬编码任何机器上的路径。
 - 仍然**没有删除工具**（清理只发生在 `.backup/` 内的旧备份上）。
 
+## 0.2.4 修复
+
+- `memory_archive` 新建文件时不再返回 `backup: undefined`（值不是合法 JSON，工具层报 `not lossless JSON`）。
+- `memory_archive` / `memory_patch` 的输出 schema 补声明可选 `backup` 字段——此前返回值里的
+  `backup` 没在 `additionalProperties: false` 的 schema 里声明，工具层一律把**成功**的调用判成
+  `value.backup is not a declared property`（覆盖写与就地更正都中招，实际已落盘）。
+- 新增回归测试：新建不带 `backup`、覆盖/更正带 `string` 型 `backup`，且两个工具的 schema 必须声明它。
+
+## 0.2.5 修复
+
+- `memory_index` / `memory_patch` 的目标文件补 `.md` 扩展名校验——此前这两个工具只校验路径落在
+  允许根内、不校验扩展名，与「安全边界」的承诺不一致（感谢 awesome-dsh-plugin 维护者 fkysly 的核对意见）。
+  现在四个工具的目标文件一律要求 `.md`。
+- 两个工具的参数描述同步注明 `.md` 要求。
+
 ## 安全边界
 
-- 只能写 `.md`，且必须落在 `allowedRoots` 内；参数非法、锚点找不到、文件已存在（未声明 `overwrite`）都会拒绝。
+- 四个工具的目标文件都必须以 `.md` 结尾，且必须落在 `allowedRoots` 内；参数非法、锚点找不到、文件已存在（未声明 `overwrite`）都会拒绝。
 - 插件运行在 DSH 主进程内，不受文件沙箱约束——这是 DSH 的设计（沙箱防的是模型，不是插件）。
   本插件把该能力收窄成"只能写记忆目录里的 .md"。
 - 不写凭据、不联网、不 spawn 子进程。

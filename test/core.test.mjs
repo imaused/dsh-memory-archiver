@@ -10,6 +10,7 @@ import {
   assertInside,
   assertMemoryFileName,
   markSuperseded,
+  insertIndexRow,
   patchMemoryFile,
   pruneBackups,
   supersedeMemoryFile,
@@ -112,6 +113,26 @@ test('patchMemoryFile backs up before an in-place correction', async () => {
   assert.ok(res.backup)
   assert.equal(readFileSync(res.backup, 'utf8'), '结论 A\n')
   assert.match(readFileSync(file, 'utf8'), /此处更正/)
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test('patchMemoryFile and insertIndexRow refuse non-.md targets', async () => {
+  const dir = root()
+  const note = join(dir, 'note.txt')
+  writeFileSync(note, 'text')
+  await assert.rejects(
+    () => patchMemoryFile({ roots: [dir], file: note, oldString: 'text', newString: 'next' }),
+    /必须是 \.md/,
+  )
+  await assert.rejects(
+    () => insertIndexRow({ roots: [dir], indexFile: note, row: '| x |' }),
+    /必须是 \.md/,
+  )
+  // 越界检查仍在扩展名校验之前：连根都进不了的目标直接报越界。
+  await assert.rejects(
+    () => insertIndexRow({ roots: [dir], indexFile: join(dir, '..', 'outside.md'), row: '| x |' }),
+    /不在允许的记忆目录内/,
+  )
   rmSync(dir, { recursive: true, force: true })
 })
 
